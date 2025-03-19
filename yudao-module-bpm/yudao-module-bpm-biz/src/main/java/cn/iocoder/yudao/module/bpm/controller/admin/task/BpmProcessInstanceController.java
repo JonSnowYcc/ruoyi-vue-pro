@@ -1,17 +1,15 @@
 package cn.iocoder.yudao.module.bpm.controller.admin.task;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.number.NumberUtils;
-import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstanceCancelReqVO;
-import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstanceCreateReqVO;
-import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstancePageReqVO;
-import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.BpmProcessInstanceRespVO;
+import cn.iocoder.yudao.module.bpm.controller.admin.task.vo.instance.*;
 import cn.iocoder.yudao.module.bpm.convert.task.BpmProcessInstanceConvert;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmCategoryDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
-import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.BpmnModelUtils;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmCategoryService;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmProcessDefinitionService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmProcessInstanceService;
@@ -23,8 +21,6 @@ import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
-import jakarta.validation.Valid;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.task.api.Task;
@@ -32,12 +28,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "管理后台 - 流程实例") // 流程实例，通过流程定义创建的一次“申请”
@@ -78,8 +76,16 @@ public class BpmProcessInstanceController {
                 convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
         Map<String, BpmCategoryDO> categoryMap = categoryService.getCategoryMap(
                 convertSet(processDefinitionMap.values(), ProcessDefinition::getCategory));
+        Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
+                convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
+        Set<Long> userIds = convertSet(pageResult.getList(), processInstance -> NumberUtils.parseLong(processInstance.getStartUserId()));
+        userIds.addAll(convertSetByFlatMap(taskMap.values(),
+                tasks -> tasks.stream().map(Task::getAssignee).filter(StrUtil::isNotBlank).map(Long::parseLong)));
+        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(userIds);
+        Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
+                convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
         return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
-                processDefinitionMap, categoryMap, taskMap, null, null));
+                processDefinitionMap, categoryMap, taskMap, userMap, deptMap, processDefinitionInfoMap));
     }
 
     @GetMapping("/manager-page")
@@ -105,8 +111,10 @@ public class BpmProcessInstanceController {
                 convertSet(pageResult.getList(), processInstance -> NumberUtils.parseLong(processInstance.getStartUserId())));
         Map<Long, DeptRespDTO> deptMap = deptApi.getDeptMap(
                 convertSet(userMap.values(), AdminUserRespDTO::getDeptId));
+        Map<String, BpmProcessDefinitionInfoDO> processDefinitionInfoMap = processDefinitionService.getProcessDefinitionInfoMap(
+                convertSet(pageResult.getList(), HistoricProcessInstance::getProcessDefinitionId));
         return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstancePage(pageResult,
-                processDefinitionMap, categoryMap, taskMap, userMap, deptMap));
+                processDefinitionMap, categoryMap, taskMap, userMap, deptMap, processDefinitionInfoMap));
     }
 
     @PostMapping("/create")
@@ -131,17 +139,16 @@ public class BpmProcessInstanceController {
                 processInstance.getProcessDefinitionId());
         BpmProcessDefinitionInfoDO processDefinitionInfo = processDefinitionService.getProcessDefinitionInfo(
                 processInstance.getProcessDefinitionId());
-        String bpmnXml = BpmnModelUtils.getBpmnXml(
-                processDefinitionService.getProcessDefinitionBpmnModel(processInstance.getProcessDefinitionId()));
         AdminUserRespDTO startUser = adminUserApi.getUser(NumberUtils.parseLong(processInstance.getStartUserId()));
         DeptRespDTO dept = null;
         if (startUser != null && startUser.getDeptId() != null) {
             dept = deptApi.getDept(startUser.getDeptId());
         }
         return success(BpmProcessInstanceConvert.INSTANCE.buildProcessInstance(processInstance,
-                processDefinition, processDefinitionInfo, bpmnXml, startUser, dept));
+                processDefinition, processDefinitionInfo, startUser, dept));
     }
 
+    // TODO @lesan：【子流程】子流程如果取消，主流程应该是通过、还是不通过哈？还是禁用掉子流程的取消？
     @DeleteMapping("/cancel-by-start-user")
     @Operation(summary = "用户取消流程实例", description = "取消发起的流程")
     @PreAuthorize("@ss.hasPermission('bpm:process-instance:cancel')")
@@ -158,6 +165,36 @@ public class BpmProcessInstanceController {
             @Valid @RequestBody BpmProcessInstanceCancelReqVO cancelReqVO) {
         processInstanceService.cancelProcessInstanceByAdmin(getLoginUserId(), cancelReqVO);
         return success(true);
+    }
+
+    @GetMapping("/get-approval-detail")
+    @Operation(summary = "获得审批详情")
+    @Parameter(name = "id", description = "流程实例的编号", required = true)
+    @PreAuthorize("@ss.hasPermission('bpm:process-instance:query')")
+    @SuppressWarnings("unchecked")
+    public CommonResult<BpmApprovalDetailRespVO> getApprovalDetail(@Valid BpmApprovalDetailReqVO reqVO) {
+        if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
+            reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
+        }
+        return success(processInstanceService.getApprovalDetail(getLoginUserId(), reqVO));
+    }
+
+    @GetMapping("/get-next-approval-nodes")
+    @Operation(summary = "获取下一个执行的流程节点")
+    @PreAuthorize("@ss.hasPermission('bpm:process-instance:query')")
+    @SuppressWarnings("unchecked")
+    public CommonResult<List<BpmApprovalDetailRespVO.ActivityNode>> getNextApprovalNodes(@Valid BpmApprovalDetailReqVO reqVO) {
+        if (StrUtil.isNotEmpty(reqVO.getProcessVariablesStr())) {
+            reqVO.setProcessVariables(JsonUtils.parseObject(reqVO.getProcessVariablesStr(), Map.class));
+        }
+        return success(processInstanceService.getNextApprovalNodes(getLoginUserId(), reqVO));
+    }
+
+    @GetMapping("/get-bpmn-model-view")
+    @Operation(summary = "获取流程实例的 BPMN 模型视图", description = "在【流程详细】界面中，进行调用")
+    @Parameter(name = "id", description = "流程实例的编号", required = true)
+    public CommonResult<BpmProcessInstanceBpmnModelViewRespVO> getProcessInstanceBpmnModelView(@RequestParam(value = "id") String id) {
+        return success(processInstanceService.getProcessInstanceBpmnModelView(id));
     }
 
 }

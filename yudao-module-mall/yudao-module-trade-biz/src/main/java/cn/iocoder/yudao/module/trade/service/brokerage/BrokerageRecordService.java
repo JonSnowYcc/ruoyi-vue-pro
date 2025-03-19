@@ -11,7 +11,7 @@ import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageRecordStatusEnum;
 import cn.iocoder.yudao.module.trade.service.brokerage.bo.BrokerageAddReqBO;
 import cn.iocoder.yudao.module.trade.service.brokerage.bo.UserBrokerageSummaryRespBO;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +32,7 @@ public interface BrokerageRecordService {
      * @param id 编号
      * @return 佣金记录
      */
-    BrokerageRecordDO getBrokerageRecord(Integer id);
+    BrokerageRecordDO getBrokerageRecord(Long id);
 
     /**
      * 获得佣金记录分页

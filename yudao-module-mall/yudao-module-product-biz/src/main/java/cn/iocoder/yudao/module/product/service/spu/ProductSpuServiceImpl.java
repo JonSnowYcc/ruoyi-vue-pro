@@ -20,12 +20,12 @@ import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import com.google.common.collect.Maps;
-import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -78,7 +78,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Transactional(rollbackFor = Exception.class)
     public void updateSpu(ProductSpuSaveReqVO updateReqVO) {
         // 校验 SPU 是否存在
-        validateSpuExists(updateReqVO.getId());
+        ProductSpuDO spu = validateSpuExists(updateReqVO.getId());
         // 校验分类、品牌
         validateCategory(updateReqVO.getCategoryId());
         brandService.validateProductBrand(updateReqVO.getBrandId());
@@ -87,7 +87,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         productSkuService.validateSkuList(skuSaveReqList, updateReqVO.getSpecType());
 
         // 更新 SPU
-        ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class);
+        ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class).setStatus(spu.getStatus());
         initSpuFromSkus(updateObj, skuSaveReqList);
         productSpuMapper.updateById(updateObj);
         // 批量更新 SKU
@@ -176,10 +176,12 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         productSkuService.deleteSkuBySpuId(id);
     }
 
-    private void validateSpuExists(Long id) {
-        if (productSpuMapper.selectById(id) == null) {
+    private ProductSpuDO validateSpuExists(Long id) {
+        ProductSpuDO spuDO = productSpuMapper.selectById(id);
+        if (spuDO == null) {
             throw exception(SPU_NOT_EXISTS);
         }
+        return spuDO;
     }
 
     @Override

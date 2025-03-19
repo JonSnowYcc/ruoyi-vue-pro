@@ -28,8 +28,6 @@ import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import cn.iocoder.yudao.module.trade.api.order.TradeOrderApi;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderCancelTypeEnum;
-import jakarta.annotation.Nullable;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
@@ -37,6 +35,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import javax.annotation.Nullable;
+import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -131,7 +131,7 @@ public class CombinationRecordServiceImpl implements CombinationRecordService {
             throw exception(COMBINATION_JOIN_ACTIVITY_PRODUCT_NOT_EXISTS);
         }
         // 4.3 校验库存是否充足
-        if (count > sku.getStock()) {
+        if (count >= sku.getStock()) {
             throw exception(COMBINATION_ACTIVITY_UPDATE_STOCK_FAIL);
         }
 
@@ -375,7 +375,7 @@ public class CombinationRecordServiceImpl implements CombinationRecordService {
             CombinationRecordDO updateRecord = new CombinationRecordDO().setId(item.getId())
                     .setStatus(status.getStatus()).setEndTime(now);
             if (CombinationRecordStatusEnum.isSuccess(status.getStatus())) { // 虚拟成团完事更改状态成功后还需要把参与人数修改为成团需要人数
-                updateRecord.setUserCount(updateRecord.getUserSize());
+                updateRecord.setUserCount(records.size()).setVirtualGroup(Boolean.TRUE); // 标记为虚拟成团
             }
             updateRecords.add(updateRecord);
         });

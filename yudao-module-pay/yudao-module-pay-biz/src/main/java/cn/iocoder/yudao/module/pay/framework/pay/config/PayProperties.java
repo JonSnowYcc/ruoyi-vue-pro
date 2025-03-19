@@ -5,7 +5,7 @@ import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotEmpty;
 
 @ConfigurationProperties(prefix = "yudao.pay")
 @Validated
@@ -38,6 +38,15 @@ public class PayProperties {
     @NotEmpty(message = "支付回调地址不能为空")
     @URL(message = "支付回调地址的格式必须是 URL")
     private String refundNotifyUrl;
+
+    /**
+     * 转账回调地址
+     *
+     * 实际上，对应的 PayNotifyController 的 notifyTransfer 方法的 URL
+     *
+     * 回调顺序：支付渠道（支付宝支付、微信支付） => yudao-module-pay 的 transferNotifyUrl 地址 => 业务的 PayAppDO.transferNotifyUrl 地址
+     */
+    private String transferNotifyUrl;
 
     /**
      * 支付订单 no 的前缀

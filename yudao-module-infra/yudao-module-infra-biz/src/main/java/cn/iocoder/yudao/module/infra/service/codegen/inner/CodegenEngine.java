@@ -36,11 +36,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.hutool.core.map.MapUtil.getStr;
@@ -398,6 +398,11 @@ public class CodegenEngine {
         Map<String, String> templates = new LinkedHashMap<>();
         templates.putAll(SERVER_TEMPLATES);
         templates.putAll(FRONT_TEMPLATES.row(frontType));
+        // 如果禁用单元测试，则移除对应的模版
+        if (Boolean.FALSE.equals(codegenProperties.getUnitTestEnable())) {
+            templates.remove(javaTemplatePath("test/serviceTest"));
+            templates.remove("codegen/sql/h2.vm");
+        }
         return templates;
     }
 

@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.hibernate.validator.constraints.URL;
 
-import jakarta.validation.constraints.*;
+import javax.validation.constraints.*;
 
 /**
 * 支付应用信息 Base VO，提供给添加、修改、详细的子 VO 使用
@@ -39,5 +39,9 @@ public class PayAppBaseVO {
     @NotNull(message = "退款结果的回调地址不能为空")
     @URL(message = "退款结果的回调地址必须为 URL 格式")
     private String refundNotifyUrl;
+
+    @Schema(description = "转账结果的回调地址", example = "http://127.0.0.1:48080/transfer-callback")
+    @URL(message = "转账结果的回调地址必须为 URL 格式")
+    private String transferNotifyUrl;
 
 }

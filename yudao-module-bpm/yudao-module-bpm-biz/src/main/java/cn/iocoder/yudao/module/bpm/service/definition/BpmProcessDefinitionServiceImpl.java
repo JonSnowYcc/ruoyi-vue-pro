@@ -5,14 +5,13 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.object.PageUtils;
+import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.process.BpmProcessDefinitionPageReqVO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmFormDO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.dal.mysql.definition.BpmProcessDefinitionInfoMapper;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmnModelConstants;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.FlowableUtils;
-import cn.iocoder.yudao.module.bpm.service.definition.dto.BpmModelMetaInfoRespDTO;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.common.engine.impl.db.SuspensionState;
@@ -24,12 +23,12 @@ import org.flowable.engine.repository.ProcessDefinitionQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.addIfNotNull;
-import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_DEFINITION_KEY_NOT_MATCH;
-import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.PROCESS_DEFINITION_NAME_NOT_MATCH;
+import static cn.iocoder.yudao.module.bpm.enums.ErrorCodeConstants.*;
 import static java.util.Collections.emptyList;
 
 /**
@@ -85,6 +84,19 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     }
 
     @Override
+    public boolean canUserStartProcessDefinition(BpmProcessDefinitionInfoDO processDefinition, Long userId) {
+        if (processDefinition == null) {
+            return false;
+        }
+        // 为空，则所有人都可以发起
+        if (CollUtil.isEmpty(processDefinition.getStartUserIds())) {
+            return true;
+        }
+        // 不为空，则需要存在里面
+        return processDefinition.getStartUserIds().contains(userId);
+    }
+
+    @Override
     public List<Deployment> getDeploymentList(Set<String> ids) {
         if (CollUtil.isEmpty(ids)) {
             return emptyList();
@@ -105,8 +117,8 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
     }
 
     @Override
-    public String createProcessDefinition(Model model, BpmModelMetaInfoRespDTO modelMetaInfo,
-                                          byte[] bpmnBytes, BpmFormDO form) {
+    public String createProcessDefinition(Model model, BpmModelMetaInfoVO modelMetaInfo,
+                                          byte[] bpmnBytes, String simpleJson, BpmFormDO form) {
         // 创建 Deployment 部署
         Deployment deploy = repositoryService.createDeployment()
                 .key(model.getKey()).name(model.getName()).category(model.getCategory())
@@ -131,7 +143,8 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
 
         // 插入拓展表
         BpmProcessDefinitionInfoDO definitionDO = BeanUtils.toBean(modelMetaInfo, BpmProcessDefinitionInfoDO.class)
-                .setModelId(model.getId()).setProcessDefinitionId(definition.getId());
+                .setModelId(model.getId()).setCategory(model.getCategory()).setProcessDefinitionId(definition.getId())
+                .setModelType(modelMetaInfo.getType()).setSimpleModel(simpleJson);
         if (form != null) {
             definitionDO.setFormFields(form.getFields()).setFormConf(form.getConf());
         }
@@ -141,19 +154,33 @@ public class BpmProcessDefinitionServiceImpl implements BpmProcessDefinitionServ
 
     @Override
     public void updateProcessDefinitionState(String id, Integer state) {
+        ProcessDefinition processDefinition = repositoryService.getProcessDefinition(id);
+        if (processDefinition == null) {
+            throw exception(PROCESS_DEFINITION_NOT_EXISTS);
+        }
+
         // 激活
         if (Objects.equals(SuspensionState.ACTIVE.getStateCode(), state)) {
-            repositoryService.activateProcessDefinitionById(id, false, null);
+            if (processDefinition.isSuspended()) {
+                repositoryService.activateProcessDefinitionById(id, false, null);
+            }
             return;
         }
         // 挂起
         if (Objects.equals(SuspensionState.SUSPENDED.getStateCode(), state)) {
             // suspendProcessInstances = false，进行中的任务，不进行挂起。
             // 原因：只要新的流程不允许发起即可，老流程继续可以执行。
-            repositoryService.suspendProcessDefinitionById(id, false, null);
+            if (!processDefinition.isSuspended()) {
+                repositoryService.suspendProcessDefinitionById(id, false, null);
+            }
             return;
         }
         log.error("[updateProcessDefinitionState][流程定义({}) 修改未知状态({})]", id, state);
+    }
+
+    @Override
+    public void updateProcessDefinitionSortByModelId(String modelId, Long sort) {
+        processDefinitionMapper.updateByModelId(modelId, new BpmProcessDefinitionInfoDO().setSort(sort));
     }
 
     @Override

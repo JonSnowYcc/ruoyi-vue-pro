@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.annotation.Resource;
+import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -121,7 +121,7 @@ public class CartServiceImpl implements CartService {
         }
 
         // 批量标记删除
-        cartMapper.deleteBatchIds(ids);
+        cartMapper.deleteByIds(convertSet(carts, CartDO::getId));
     }
 
     @Override

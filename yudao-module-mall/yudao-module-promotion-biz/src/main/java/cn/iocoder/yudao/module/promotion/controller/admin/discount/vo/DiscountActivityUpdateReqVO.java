@@ -5,9 +5,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 @Schema(description = "管理后台 - 限时折扣活动更新 Request VO")
@@ -25,6 +25,6 @@ public class DiscountActivityUpdateReqVO extends DiscountActivityBaseVO {
      */
     @NotEmpty(message = "商品列表不能为空")
     @Valid
-    private List<DiscountActivityCreateReqVO.Product> products;
+    private List<Product> products;
 
 }

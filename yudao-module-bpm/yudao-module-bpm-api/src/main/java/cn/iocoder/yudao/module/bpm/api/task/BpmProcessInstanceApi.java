@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.bpm.api.task;
 
 import cn.iocoder.yudao.module.bpm.api.task.dto.BpmProcessInstanceCreateReqDTO;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 
 /**
  * 流程实例 Api 接口
@@ -19,5 +19,7 @@ public interface BpmProcessInstanceApi {
      * @return 实例的编号
      */
     String createProcessInstance(Long userId, @Valid BpmProcessInstanceCreateReqDTO reqDTO);
+
+
 
 }

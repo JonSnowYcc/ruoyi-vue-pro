@@ -3,7 +3,7 @@ package cn.iocoder.yudao.module.system.service.auth;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 
 /**
  * 管理后台的认证 Service 接口
@@ -52,7 +52,7 @@ public interface AdminAuthService {
      * @param reqVO 登录信息
      * @return 登录结果
      */
-    AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO) ;
+    AuthLoginRespVO smsLogin(AuthSmsLoginReqVO reqVO);
 
     /**
      * 社交快捷登录，使用 code 授权码
@@ -69,5 +69,20 @@ public interface AdminAuthService {
      * @return 登录结果
      */
     AuthLoginRespVO refreshToken(String refreshToken);
+
+    /**
+     * 用户注册
+     *
+     * @param createReqVO 注册用户
+     * @return 注册结果
+     */
+    AuthLoginRespVO register(AuthRegisterReqVO createReqVO);
+
+    /**
+     * 重置密码
+     *
+     * @param reqVO 验证码信息
+     */
+    void resetPassword(AuthResetPasswordReqVO reqVO);
 
 }

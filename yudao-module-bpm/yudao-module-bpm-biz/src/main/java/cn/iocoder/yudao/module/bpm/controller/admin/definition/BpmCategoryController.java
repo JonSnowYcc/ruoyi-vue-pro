@@ -12,12 +12,12 @@ import cn.iocoder.yudao.module.bpm.service.definition.BpmCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
-import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.Comparator;
 import java.util.List;
 
@@ -45,6 +45,15 @@ public class BpmCategoryController {
     @PreAuthorize("@ss.hasPermission('bpm:category:update')")
     public CommonResult<Boolean> updateCategory(@Valid @RequestBody BpmCategorySaveReqVO updateReqVO) {
         categoryService.updateCategory(updateReqVO);
+        return success(true);
+    }
+
+    @PutMapping("/update-sort-batch")
+    @Operation(summary = "批量更新流程分类的排序")
+    @Parameter(name = "ids", description = "分类编号列表", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('bpm:category:update')")
+    public CommonResult<Boolean> updateCategorySortBatch(@RequestParam("ids") List<Long> ids) {
+        categoryService.updateCategorySortBatch(ids);
         return success(true);
     }
 

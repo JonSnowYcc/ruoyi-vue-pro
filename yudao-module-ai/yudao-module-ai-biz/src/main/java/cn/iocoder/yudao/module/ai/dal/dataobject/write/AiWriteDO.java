@@ -2,8 +2,10 @@ package cn.iocoder.yudao.module.ai.dal.dataobject.write;
 
 import cn.iocoder.yudao.framework.ai.core.enums.AiPlatformEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.ai.dal.dataobject.model.AiModelDO;
+import cn.iocoder.yudao.module.ai.enums.DictTypeConstants;
 import cn.iocoder.yudao.module.ai.enums.write.AiWriteTypeEnum;
-import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -14,6 +16,7 @@ import lombok.Data;
  * @author xiaoxin
  */
 @TableName("ai_write")
+@KeySequence("ai_write_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
 public class AiWriteDO extends BaseDO {
 
@@ -44,6 +47,12 @@ public class AiWriteDO extends BaseDO {
      */
     private String platform;
     /**
+     * 模型编号
+     *
+     * 关联 {@link AiModelDO#getId()}
+     */
+    private Long modelId;
+    /**
      * 模型
      */
     private String model;
@@ -65,25 +74,25 @@ public class AiWriteDO extends BaseDO {
     /**
      * 长度提示词
      *
-     * 字典：{@link cn.iocoder.yudao.module.ai.enums.DictTypeConstants#AI_WRITE_LENGTH}
+     * 字典：{@link DictTypeConstants#AI_WRITE_LENGTH}
      */
     private Integer length;
     /**
      * 格式提示词
      *
-     * 字典：{@link cn.iocoder.yudao.module.ai.enums.DictTypeConstants#AI_WRITE_FORMAT}
+     * 字典：{@link DictTypeConstants#AI_WRITE_FORMAT}
      */
     private Integer format;
     /**
      * 语气提示词
      *
-     * 字典：{@link cn.iocoder.yudao.module.ai.enums.DictTypeConstants#AI_WRITE_TONE}
+     * 字典：{@link DictTypeConstants#AI_WRITE_TONE}
      */
     private Integer tone;
     /**
      * 语言提示词
      *
-     * 字典：{@link cn.iocoder.yudao.module.ai.enums.DictTypeConstants#AI_WRITE_LANGUAGE}
+     * 字典：{@link DictTypeConstants#AI_WRITE_LANGUAGE}
      */
     private Integer language;
 

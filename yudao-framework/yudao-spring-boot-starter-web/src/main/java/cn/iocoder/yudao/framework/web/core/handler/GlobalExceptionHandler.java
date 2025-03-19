@@ -1,10 +1,10 @@
 package cn.iocoder.yudao.framework.web.core.handler;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.servlet.JakartaServletUtil;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
@@ -16,10 +16,6 @@ import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import cn.iocoder.yudao.module.infra.api.logger.ApiErrorLogApi;
 import cn.iocoder.yudao.module.infra.api.logger.dto.ApiErrorLogCreateReqDTO;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.ValidationException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,6 +23,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -34,9 +31,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.ValidationException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -92,9 +93,9 @@ public class GlobalExceptionHandler {
         if (ex instanceof NoHandlerFoundException) {
             return noHandlerFoundExceptionHandler((NoHandlerFoundException) ex);
         }
-        if (ex instanceof NoResourceFoundException) {
-            return noResourceFoundExceptionHandler(request, (NoResourceFoundException) ex);
-        }
+//        if (ex instanceof NoResourceFoundException) {
+//            return noResourceFoundExceptionHandler(request, (NoResourceFoundException) ex);
+//        }
         if (ex instanceof HttpRequestMethodNotSupportedException) {
             return httpRequestMethodNotSupportedExceptionHandler((HttpRequestMethodNotSupportedException) ex);
         }
@@ -135,9 +136,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public CommonResult<?> methodArgumentNotValidExceptionExceptionHandler(MethodArgumentNotValidException ex) {
         log.warn("[methodArgumentNotValidExceptionExceptionHandler]", ex);
+        // 获取 errorMessage
+        String errorMessage = null;
         FieldError fieldError = ex.getBindingResult().getFieldError();
-        assert fieldError != null; // 断言，避免告警
-        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数不正确:%s", fieldError.getDefaultMessage()));
+        if (fieldError == null) {
+            // 组合校验，参考自 https://t.zsxq.com/3HVTx
+            List<ObjectError> allErrors = ex.getBindingResult().getAllErrors();
+            if (CollUtil.isNotEmpty(allErrors)) {
+                errorMessage = allErrors.get(0).getDefaultMessage();
+            }
+        } else {
+            errorMessage = fieldError.getDefaultMessage();
+        }
+        // 转换 CommonResult
+        if (StrUtil.isEmpty(errorMessage)) {
+            return CommonResult.error(BAD_REQUEST);
+        }
+        return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数不正确:%s", errorMessage));
     }
 
     /**
@@ -200,14 +215,14 @@ public class GlobalExceptionHandler {
         return CommonResult.error(NOT_FOUND.getCode(), String.format("请求地址不存在:%s", ex.getRequestURL()));
     }
 
-    /**
-     * 处理 SpringMVC 请求地址不存在
-     */
-    @ExceptionHandler(NoResourceFoundException.class)
-    private CommonResult<?> noResourceFoundExceptionHandler(HttpServletRequest req, NoResourceFoundException ex) {
-        log.warn("[noResourceFoundExceptionHandler]", ex);
-        return CommonResult.error(NOT_FOUND.getCode(), String.format("请求地址不存在:%s", ex.getResourcePath()));
-    }
+//    /**
+//     * 处理 SpringMVC 请求地址不存在
+//     */
+//    @ExceptionHandler(NoResourceFoundException.class)
+//    private CommonResult<?> noResourceFoundExceptionHandler(HttpServletRequest req, NoResourceFoundException ex) {
+//        log.warn("[noResourceFoundExceptionHandler]", ex);
+//        return CommonResult.error(NOT_FOUND.getCode(), String.format("请求地址不存在:%s", ex.getResourcePath()));
+//    }
 
     /**
      * 处理 SpringMVC 请求方法不正确
@@ -310,12 +325,12 @@ public class GlobalExceptionHandler {
         errorLog.setApplicationName(applicationName);
         errorLog.setRequestUrl(request.getRequestURI());
         Map<String, Object> requestParams = MapUtil.<String, Object>builder()
-                .put("query", JakartaServletUtil.getParamMap(request))
-                .put("body", JakartaServletUtil.getBody(request)).build();
+                .put("query", ServletUtils.getParamMap(request))
+                .put("body", ServletUtils.getBody(request)).build();
         errorLog.setRequestParams(JsonUtils.toJsonString(requestParams));
         errorLog.setRequestMethod(request.getMethod());
         errorLog.setUserAgent(ServletUtils.getUserAgent(request));
-        errorLog.setUserIp(JakartaServletUtil.getClientIP(request));
+        errorLog.setUserIp(ServletUtils.getClientIP(request));
         errorLog.setExceptionTime(LocalDateTime.now());
     }
 
@@ -377,6 +392,12 @@ public class GlobalExceptionHandler {
             log.error("[AI 大模型 yudao-module-ai - 表结构未导入][参考 https://cloud.iocoder.cn/ai/build/ 开启]");
             return CommonResult.error(NOT_IMPLEMENTED.getCode(),
                     "[AI 大模型 yudao-module-ai - 表结构未导入][参考 https://cloud.iocoder.cn/ai/build/ 开启]");
+        }
+        // 9. IoT 物联网
+        if (message.contains("iot_")) {
+            log.error("[IoT 物联网 yudao-module-iot - 表结构未导入][参考 https://doc.iocoder.cn/iot/build/ 开启]");
+            return CommonResult.error(NOT_IMPLEMENTED.getCode(),
+                    "[IoT 物联网 yudao-module-iot - 表结构未导入][参考 https://doc.iocoder.cn/iot/build/ 开启]");
         }
         return null;
     }

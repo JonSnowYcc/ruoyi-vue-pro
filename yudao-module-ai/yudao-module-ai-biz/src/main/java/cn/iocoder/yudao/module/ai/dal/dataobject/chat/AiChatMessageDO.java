@@ -1,13 +1,18 @@
 package cn.iocoder.yudao.module.ai.dal.dataobject.chat;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import org.springframework.ai.chat.messages.MessageType;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
-import cn.iocoder.yudao.module.ai.dal.dataobject.model.AiChatModelDO;
+import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
+import cn.iocoder.yudao.module.ai.dal.dataobject.knowledge.AiKnowledgeSegmentDO;
 import cn.iocoder.yudao.module.ai.dal.dataobject.model.AiChatRoleDO;
+import cn.iocoder.yudao.module.ai.dal.dataobject.model.AiModelDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
+import org.springframework.ai.chat.messages.MessageType;
+
+import java.util.List;
 
 /**
  * AI Chat 消息 DO
@@ -15,10 +20,9 @@ import lombok.*;
  * @since 2024/4/14 17:35
  * @since 2024/4/14 17:35
  */
-@TableName("ai_chat_message")
+@TableName(value = "ai_chat_message", autoResultMap = true)
 @KeySequence("ai_chat_conversation_seq") // 用于 Oracle、PostgreSQL、Kingbase、DB2、H2 数据库的主键自增。如果是 MySQL 等数据库，可不写。
 @Data
-@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -68,12 +72,14 @@ public class AiChatMessageDO extends BaseDO {
 
     /**
      * 模型标志
+     *
+     * 冗余 {@link AiModelDO#getModel()}
      */
     private String model;
     /**
      * 模型编号
      *
-     * 关联 {@link AiChatModelDO#getId()} 字段
+     * 关联 {@link AiModelDO#getId()} 字段
      */
     private Long modelId;
 
@@ -86,5 +92,13 @@ public class AiChatMessageDO extends BaseDO {
      * 是否携带上下文
      */
     private Boolean useContext;
+
+    /**
+     * 知识库段落编号数组
+     *
+     * 关联 {@link AiKnowledgeSegmentDO#getId()} 字段
+     */
+    @TableField(typeHandler = LongListTypeHandler.class)
+    private List<Long> segmentIds;
 
 }

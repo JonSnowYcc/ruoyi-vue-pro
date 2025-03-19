@@ -27,10 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
-import jakarta.annotation.security.PermitAll;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
+import javax.annotation.Resource;
+import javax.annotation.security.PermitAll;
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -115,6 +115,13 @@ public class AuthController {
         return success(AuthConvert.INSTANCE.convert(user, roles, menuList));
     }
 
+    @PostMapping("/register")
+    @PermitAll
+    @Operation(summary = "注册用户")
+    public CommonResult<AuthLoginRespVO> register(@RequestBody @Valid AuthRegisterReqVO registerReqVO) {
+        return success(authService.register(registerReqVO));
+    }
+
     // ========== 短信登录相关 ==========
 
     @PostMapping("/sms-login")
@@ -129,6 +136,14 @@ public class AuthController {
     @Operation(summary = "发送手机验证码")
     public CommonResult<Boolean> sendLoginSmsCode(@RequestBody @Valid AuthSmsSendReqVO reqVO) {
         authService.sendSmsCode(reqVO);
+        return success(true);
+    }
+
+    @PostMapping("/reset-password")
+    @PermitAll
+    @Operation(summary = "重置密码")
+    public CommonResult<Boolean> resetPassword(@RequestBody @Valid AuthResetPasswordReqVO reqVO) {
+        authService.resetPassword(reqVO);
         return success(true);
     }
 

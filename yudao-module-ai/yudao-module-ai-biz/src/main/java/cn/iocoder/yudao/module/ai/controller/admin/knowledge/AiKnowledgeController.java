@@ -1,23 +1,27 @@
 package cn.iocoder.yudao.module.ai.controller.admin.knowledge;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.ai.controller.admin.knowledge.vo.knowledge.AiKnowledgeCreateMyReqVO;
+import cn.iocoder.yudao.module.ai.controller.admin.knowledge.vo.knowledge.AiKnowledgePageReqVO;
 import cn.iocoder.yudao.module.ai.controller.admin.knowledge.vo.knowledge.AiKnowledgeRespVO;
-import cn.iocoder.yudao.module.ai.controller.admin.knowledge.vo.knowledge.AiKnowledgeUpdateMyReqVO;
+import cn.iocoder.yudao.module.ai.controller.admin.knowledge.vo.knowledge.AiKnowledgeSaveReqVO;
 import cn.iocoder.yudao.module.ai.dal.dataobject.knowledge.AiKnowledgeDO;
 import cn.iocoder.yudao.module.ai.service.knowledge.AiKnowledgeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 
 @Tag(name = "管理后台 - AI 知识库")
 @RestController
@@ -28,24 +32,44 @@ public class AiKnowledgeController {
     @Resource
     private AiKnowledgeService knowledgeService;
 
-    @GetMapping("/my-page")
-    @Operation(summary = "获取【我的】知识库分页")
-    public CommonResult<PageResult<AiKnowledgeRespVO>> getKnowledgePageMy(@Validated PageParam pageReqVO) {
-        PageResult<AiKnowledgeDO> pageResult = knowledgeService.getKnowledgePageMy(getLoginUserId(), pageReqVO);
+    @GetMapping("/page")
+    @Operation(summary = "获取知识库分页")
+    @PreAuthorize("@ss.hasPermission('ai:knowledge:query')")
+    public CommonResult<PageResult<AiKnowledgeRespVO>> getKnowledgePage(@Valid AiKnowledgePageReqVO pageReqVO) {
+        PageResult<AiKnowledgeDO> pageResult = knowledgeService.getKnowledgePage(pageReqVO);
         return success(BeanUtils.toBean(pageResult, AiKnowledgeRespVO.class));
     }
 
-    @PostMapping("/create-my")
-    @Operation(summary = "创建【我的】知识库")
-    public CommonResult<Long> createKnowledgeMy(@RequestBody @Valid AiKnowledgeCreateMyReqVO createReqVO) {
-        return success(knowledgeService.createKnowledgeMy(createReqVO, getLoginUserId()));
+    @GetMapping("/get")
+    @Operation(summary = "获得知识库")
+    @Parameter(name = "id", description = "编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('ai:knowledge:query')")
+    public CommonResult<AiKnowledgeRespVO> getKnowledge(@RequestParam("id") Long id) {
+        AiKnowledgeDO knowledge = knowledgeService.getKnowledge(id);
+        return success(BeanUtils.toBean(knowledge, AiKnowledgeRespVO.class));
     }
 
-    @PutMapping("/update-my")
-    @Operation(summary = "更新【我的】知识库")
-    public CommonResult<Boolean> updateKnowledgeMy(@RequestBody @Valid AiKnowledgeUpdateMyReqVO updateReqVO) {
-        knowledgeService.updateKnowledgeMy(updateReqVO, getLoginUserId());
+    @PostMapping("/create")
+    @Operation(summary = "创建知识库")
+    @PreAuthorize("@ss.hasPermission('ai:knowledge:create')")
+    public CommonResult<Long> createKnowledge(@RequestBody @Valid AiKnowledgeSaveReqVO createReqVO) {
+        return success(knowledgeService.createKnowledge(createReqVO));
+    }
+
+    @PutMapping("/update")
+    @Operation(summary = "更新知识库")
+    @PreAuthorize("@ss.hasPermission('ai:knowledge:update')")
+    public CommonResult<Boolean> updateKnowledge(@RequestBody @Valid AiKnowledgeSaveReqVO updateReqVO) {
+        knowledgeService.updateKnowledge(updateReqVO);
         return success(true);
+    }
+
+    @GetMapping("/simple-list")
+    @Operation(summary = "获得知识库的精简列表")
+    public CommonResult<List<AiKnowledgeRespVO>> getKnowledgeSimpleList() {
+        List<AiKnowledgeDO> list = knowledgeService.getKnowledgeSimpleListByStatus(CommonStatusEnum.ENABLE.getStatus());
+        return success(convertList(list, knowledge -> new AiKnowledgeRespVO()
+                .setId(knowledge.getId()).setName(knowledge.getName())));
     }
 
 }

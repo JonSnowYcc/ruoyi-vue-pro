@@ -4,8 +4,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.category.BpmCategoryPageReqVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.category.BpmCategorySaveReqVO;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmCategoryDO;
-import jakarta.validation.Valid;
 
+import javax.validation.Valid;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -81,5 +81,12 @@ public interface BpmCategoryService {
      * @return 流程分类列表
      */
     List<BpmCategoryDO> getCategoryListByStatus(Integer status);
+
+    /**
+     * 批量更新流程分类的排序：每个分类的 sort 值，从 0 开始递增
+     *
+     * @param ids 分类编号列表
+     */
+    void updateCategorySortBatch(List<Long> ids);
 
 }

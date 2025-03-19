@@ -26,13 +26,13 @@ import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -127,8 +127,8 @@ public class CrmBusinessController {
     }
 
     @GetMapping("/simple-all-list")
-    @Operation(summary = "获得联系人的精简列表")
-    @PreAuthorize("@ss.hasPermission('crm:contact:query')")
+    @Operation(summary = "获得商机的精简列表")
+    @PreAuthorize("@ss.hasPermission('crm:business:query')")
     public CommonResult<List<CrmBusinessRespVO>> getSimpleContactList() {
         CrmBusinessPageReqVO reqVO = new CrmBusinessPageReqVO();
         reqVO.setPageSize(PAGE_SIZE_NONE); // 不分页

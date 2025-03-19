@@ -23,4 +23,8 @@ public class AiKnowledgeDocumentCreateReqVO {
     @URL(message = "文档 URL 格式不正确")
     private String url;
 
+    @Schema(description = "分段的最大 Token 数", requiredMode = Schema.RequiredMode.REQUIRED, example = "800")
+    @NotNull(message = "分段的最大 Token 数不能为空")
+    private Integer segmentMaxTokens;
+
 }

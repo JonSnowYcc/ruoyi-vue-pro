@@ -19,12 +19,12 @@ import cn.iocoder.yudao.module.promotion.dal.mysql.coupon.CouponMapper;
 import cn.iocoder.yudao.module.promotion.enums.coupon.CouponStatusEnum;
 import cn.iocoder.yudao.module.promotion.enums.coupon.CouponTakeTypeEnum;
 import cn.iocoder.yudao.module.promotion.enums.coupon.CouponTemplateValidityTypeEnum;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -121,6 +121,10 @@ public class CouponServiceImpl implements CouponService {
     @Transactional(rollbackFor = Exception.class)
     public Map<Long, List<Long>> takeCoupon(Long templateId, Set<Long> userIds, CouponTakeTypeEnum takeType) {
         CouponTemplateDO template = couponTemplateService.getCouponTemplate(templateId);
+        return takeCoupon(template, userIds, takeType);
+    }
+
+    private Map<Long, List<Long>> takeCoupon(CouponTemplateDO template, Set<Long> userIds, CouponTakeTypeEnum takeType) {
         // 1. 过滤掉达到领取限制的用户
         removeTakeLimitUser(userIds, template);
         // 2. 校验优惠劵是否可以领取
@@ -131,7 +135,7 @@ public class CouponServiceImpl implements CouponService {
         couponMapper.insertBatch(couponList);
 
         // 4. 增加优惠劵模板的领取数量
-        couponTemplateService.updateCouponTemplateTakeCount(templateId, userIds.size());
+        couponTemplateService.updateCouponTemplateTakeCount(template.getId(), userIds.size());
 
         return convertMultiMap(couponList, CouponDO::getUserId, CouponDO::getId);
     }
@@ -152,7 +156,7 @@ public class CouponServiceImpl implements CouponService {
                     findAndThen(userCouponIdsMap, userId, couponIds::addAll);
                 }
             } catch (Exception e) {
-                log.error("[takeCouponsByAdmin][coupon({}) 优惠券发放失败]", entry, e);
+                log.error("[takeCouponsByAdmin][coupon({}) 优惠券发放失败 userId({})]", entry, userId, e);
             }
         }
         return couponIds;
@@ -178,6 +182,9 @@ public class CouponServiceImpl implements CouponService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void invalidateCoupon(Long couponId, Long userId) {
+        if (couponId == null || couponId <= 0) {
+            return;
+        }
         // 1.1 校验优惠券
         CouponDO coupon = couponMapper.selectByIdAndUserId(couponId, userId);
         if (coupon == null) {
@@ -205,7 +212,7 @@ public class CouponServiceImpl implements CouponService {
     public void takeCouponByRegister(Long userId) {
         List<CouponTemplateDO> templates = couponTemplateService.getCouponTemplateListByTakeType(CouponTakeTypeEnum.REGISTER);
         for (CouponTemplateDO template : templates) {
-            takeCoupon(template.getId(), CollUtil.newHashSet(userId), CouponTakeTypeEnum.REGISTER);
+            takeCoupon(template, CollUtil.newHashSet(userId), CouponTakeTypeEnum.REGISTER);
         }
     }
 
@@ -269,7 +276,8 @@ public class CouponServiceImpl implements CouponService {
             throw exception(COUPON_TEMPLATE_NOT_EXISTS);
         }
         // 校验剩余数量
-        if (couponTemplate.getTakeCount() + userIds.size() > couponTemplate.getTotalCount()) {
+        if (ObjUtil.notEqual(couponTemplate.getTakeLimitCount(), CouponTemplateDO.TIME_LIMIT_COUNT_MAX) // 非不限制
+                && couponTemplate.getTakeCount() + userIds.size() > couponTemplate.getTotalCount()) {
             throw exception(COUPON_TEMPLATE_NOT_ENOUGH);
         }
         // 校验"固定日期"的有效期类型是否过期
@@ -279,7 +287,7 @@ public class CouponServiceImpl implements CouponService {
             }
         }
         // 校验领取方式
-        if (ObjectUtil.notEqual(couponTemplate.getTakeType(), takeType.getValue())) {
+        if (ObjectUtil.notEqual(couponTemplate.getTakeType(), takeType.getType())) {
             throw exception(COUPON_TEMPLATE_CANNOT_TAKE);
         }
     }

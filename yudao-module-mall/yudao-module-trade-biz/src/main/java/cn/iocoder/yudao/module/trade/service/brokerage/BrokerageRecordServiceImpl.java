@@ -31,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.annotation.Resource;
+import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -64,7 +64,7 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
     private ProductSkuApi productSkuApi;
 
     @Override
-    public BrokerageRecordDO getBrokerageRecord(Integer id) {
+    public BrokerageRecordDO getBrokerageRecord(Long id) {
         return brokerageRecordMapper.selectById(id);
     }
 
@@ -79,7 +79,7 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
         TradeConfigDO memberConfig = tradeConfigService.getTradeConfig();
         // 0 未启用分销功能
         if (memberConfig == null || !BooleanUtil.isTrue(memberConfig.getBrokerageEnabled())) {
-            log.warn("[addBrokerage][增加佣金失败：brokerageEnabled 未配置，userId({})", userId);
+            log.error("[addBrokerage][增加佣金失败：brokerageEnabled 未配置，userId({}) bizType({}) list({})", userId, bizType, list);
             return;
         }
 

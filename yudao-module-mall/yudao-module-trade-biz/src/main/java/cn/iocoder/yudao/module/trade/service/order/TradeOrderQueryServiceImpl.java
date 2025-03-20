@@ -24,10 +24,10 @@ import cn.iocoder.yudao.module.trade.framework.delivery.core.client.ExpressClien
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackQueryReqDTO;
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryExpressService;
-import jakarta.annotation.Resource;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.*;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -91,9 +91,10 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     public PageResult<TradeOrderDO> getOrderPage(TradeOrderPageReqVO reqVO) {
         // 根据用户查询条件构建用户编号列表
         Set<Long> userIds = buildQueryConditionUserIds(reqVO);
-        if (CollUtil.isEmpty(userIds)) { // 没查询到用户，说明肯定也没他的订单
+        if (userIds == null) { // 没查询到用户，说明肯定也没他的订单
             return PageResult.empty();
         }
+
         // 分页查询
         return tradeOrderMapper.selectPage(reqVO, userIds);
     }
@@ -122,11 +123,11 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     public TradeOrderSummaryRespVO getOrderSummary(TradeOrderPageReqVO reqVO) {
         // 根据用户查询条件构建用户编号列表
         Set<Long> userIds = buildQueryConditionUserIds(reqVO);
-        if (CollUtil.isEmpty(userIds)) { // 没查询到用户，说明肯定也没他的订单
+        if (userIds == null) { // 没查询到用户，说明肯定也没他的订单
             return new TradeOrderSummaryRespVO();
         }
         // 查询每个售后状态对应的数量、金额
-        List<Map<String, Object>> list = tradeOrderMapper.selectOrderSummaryGroupByRefundStatus(reqVO, null);
+        List<Map<String, Object>> list = tradeOrderMapper.selectOrderSummaryGroupByRefundStatus(reqVO, userIds);
 
         TradeOrderSummaryRespVO vo = new TradeOrderSummaryRespVO().setAfterSaleCount(0L).setAfterSalePrice(0L);
         for (Map<String, Object> map : list) {

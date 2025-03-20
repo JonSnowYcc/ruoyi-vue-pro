@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.service.price.calculator;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.module.member.api.level.MemberLevelApi;
 import cn.iocoder.yudao.module.member.api.level.dto.MemberLevelRespDTO;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
@@ -13,10 +14,10 @@ import cn.iocoder.yudao.module.promotion.enums.common.PromotionTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateReqBO;
 import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateRespBO;
-import jakarta.annotation.Resource;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
@@ -141,7 +142,9 @@ public class TradeDiscountActivityPriceCalculator implements TradePriceCalculato
      */
     public Integer calculateVipPrice(MemberLevelRespDTO level,
                                       TradePriceCalculateRespBO.OrderItem orderItem) {
-        if (level == null || level.getDiscountPercent() == null) {
+        if (level == null
+                || CommonStatusEnum.isDisable(level.getStatus())
+                || level.getDiscountPercent() == null) {
             return 0;
         }
         Integer newPrice = calculateRatePrice(orderItem.getPayPrice(), level.getDiscountPercent().doubleValue());

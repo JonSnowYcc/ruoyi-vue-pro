@@ -17,8 +17,6 @@ import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
-import jakarta.validation.Valid;
 import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.Model;
 import org.flowable.engine.repository.ProcessDefinition;
@@ -26,6 +24,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +57,7 @@ public class BpmModelController {
     @GetMapping("/list")
     @Operation(summary = "获得模型分页")
     @Parameter(name = "name", description = "模型名称", example = "芋艿")
-    public CommonResult<List<BpmModelRespVO>> getModelPage(@RequestParam(value = "name", required = false) String name) {
+    public CommonResult<List<BpmModelRespVO>> getModelList(@RequestParam(value = "name", required = false) String name) {
         List<Model> list = modelService.getModelList(name);
         if (CollUtil.isEmpty(list)) {
             return success(Collections.emptyList());

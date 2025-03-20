@@ -10,7 +10,6 @@ import cn.iocoder.yudao.module.bpm.framework.flowable.core.util.BpmnModelUtils;
 import cn.iocoder.yudao.module.bpm.service.definition.BpmModelService;
 import cn.iocoder.yudao.module.bpm.service.task.BpmTaskService;
 import com.google.common.collect.ImmutableSet;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
@@ -25,6 +24,7 @@ import org.flowable.task.api.Task;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 
@@ -109,7 +109,11 @@ public class BpmTaskEventListener extends AbstractFlowableEngineEventListener {
             // 2.2 延迟器超时处理
         } else if (ObjectUtil.equal(bpmTimerBoundaryEventType, BpmBoundaryEventTypeEnum.DELAY_TIMER_TIMEOUT)) {
             String taskKey = boundaryEvent.getAttachedToRefId();
-            taskService.processDelayTimerTimeout(event.getProcessInstanceId(), taskKey);
+            taskService.triggerTask(event.getProcessInstanceId(), taskKey);
+            // 2.3 子流程超时处理
+        } else if (ObjectUtil.equal(bpmTimerBoundaryEventType, BpmBoundaryEventTypeEnum.CHILD_PROCESS_TIMEOUT)) {
+            String taskKey = boundaryEvent.getAttachedToRefId();
+            taskService.processChildProcessTimeout(event.getProcessInstanceId(), taskKey);
         }
     }
 
